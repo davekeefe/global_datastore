@@ -26,7 +26,8 @@ var routes = function(DataStore){
                     datastores.forEach(function(element, index, array){
                         var newDataStore = element.toJSON();
                         newDataStore.links = {};
-                        newDataStore.links.self = 'http://' + req.headers.host + '/api/datastore/' + newDataStore._id
+                        newDataStore.links.id = 'http://' + req.headers.host + '/api/datastore/id/' + newDataStore._id
+                        newDataStore.links.name = 'http://' + req.headers.host + '/api/datastore/name/' + newDataStore.name
                         returnDataStores.push(newDataStore);
                     });
                     res.json(returnDataStores);
@@ -59,7 +60,35 @@ var routes = function(DataStore){
                     res.json(doc);
         });
     });
-    datastoreRouter.use('/:datastoreId', function(req, res, next){
+    datastoreRouter.use('/name/:datastoreName', function(req, res, next){
+        DataStore.find({"name": req.params.datastoreName}, function(err, datastore){
+            if(err){
+                res.status(500).send(err)
+            }
+            else if(datastore){
+                req.datastore = datastore;
+                next();
+            }
+            else {
+                res.status(404).send('No datastore found');
+            }
+
+        });
+    });
+    datastoreRouter.route('/name/:datastoreName')
+        .get(function(req, res){
+            DataStore.findOne(
+               { "name": req.params.datastoreName }, function(err,doc) {
+                    if(err)
+                        res.status(500).send(err)
+                    else
+                        var newDoc = doc.toJSON();
+            		newDoc.links = {}
+                        newDoc.links.all = 'http://' + req.headers.host + '/api/datastore/'
+                        res.json(newDoc);
+               });
+        })
+    datastoreRouter.use('/id/:datastoreId', function(req, res, next){
         DataStore.findById(req.params.datastoreId, function(err, datastore){
             if(err){
                 res.status(500).send(err)
@@ -74,9 +103,11 @@ var routes = function(DataStore){
 
         });
     });
-    datastoreRouter.route('/:datastoreId')
+    datastoreRouter.route('/id/:datastoreId')
         .get(function(req, res){
             var returnDataStore = req.datastore.toJSON();
+            returnDataStore.links = {}
+            returnDataStore.links.all = 'http://' + req.headers.host + '/api/datastore/'
             res.json(returnDataStore);
         })
         .put(function(req, res){
